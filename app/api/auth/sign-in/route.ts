@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     const response = await fetch(`${BACKEND_URL}/api/auth/sign-in/email`, {
       method: 'POST',
       headers: {
-        'Origin': 'https://agendashop.fabersoft.cl',
+        'Origin': process.env.NEXT_PUBLIC_API_URL as string,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),

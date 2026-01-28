@@ -15,7 +15,7 @@ export async function GET(
       headers: {
         Authorization: token ? `Bearer ${token}` : '',
         'Content-Type': 'application/json',
-        'Origin': 'https://agendashop.fabersoft.cl',
+        'Origin': process.env.NEXT_PUBLIC_API_URL as string,
       },
     })
 
@@ -52,7 +52,7 @@ export async function PATCH(
       headers: {
         Authorization: token ? `Bearer ${token}` : '',
         'Content-Type': 'application/json',
-        'Origin': 'https://agendashop.fabersoft.cl',
+        'Origin': process.env.NEXT_PUBLIC_API_URL as string,
       },
       body: JSON.stringify(body),
     })
@@ -89,7 +89,7 @@ export async function DELETE(
       headers: {
         Authorization: token ? `Bearer ${token}` : '',
         'Content-Type': 'application/json',
-        'Origin': 'https://agendashop.fabersoft.cl',
+        'Origin': process.env.NEXT_PUBLIC_API_URL as string,
       },
     })
 

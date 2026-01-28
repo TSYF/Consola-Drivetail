@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
-        'Origin': 'https://agendashop.fabersoft.cl',
+        'Origin': process.env.NEXT_PUBLIC_API_URL as string,
       },
     })
 
