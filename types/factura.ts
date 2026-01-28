@@ -4,6 +4,7 @@ export interface Factura {
   total: number
   fechaEmision: string
   idTransaccion: number
+  pdf?: string;
   created_at?: string
   updated_at?: string
   // Nested relations
