@@ -3,14 +3,9 @@
 import React from "react";
 
 import { useEffect, useState } from "react";
-import {
-  Ticket,
-  EstadoTicket,
-  ImportanciaTicket,
-  UrgenciaTicket,
-} from "@/types/ticket";
-import { Servicio } from "@/types/servicio";
+import { Ticket } from "@/types/ticket";
 import { User } from "@/lib/auth";
+import { Reserva } from "@/types/reserva";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { apiClient } from "@/lib/api-client";
 import { toast } from "@/hooks/use-toast";
+import { useTicketsReferenceData } from "../context/tickets-reference-data-context";
 
 interface TicketModalProps {
   open: boolean;
@@ -44,6 +40,7 @@ interface TicketModalProps {
     hasta?: string;
     id_servicio: number;
     id_user?: string;
+    id_reserva?: number;
     id_estado: number;
     id_importancia?: number;
     id_urgencia?: number;
@@ -62,59 +59,66 @@ export function TicketModal({
   const [hasta, setHasta] = useState("");
   const [idServicio, setIdServicio] = useState("");
   const [idUser, setIdUser] = useState("");
+  const [idReserva, setIdReserva] = useState("");
   const [idEstado, setIdEstado] = useState("");
   const [idImportancia, setIdImportancia] = useState("");
   const [idUrgencia, setIdUrgencia] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Dropdown options state
-  const [servicios, setServicios] = useState<Servicio[]>([]);
-  const [estados, setEstados] = useState<EstadoTicket[]>([]);
-  const [importancias, setImportancias] = useState<ImportanciaTicket[]>([]);
-  const [urgencias, setUrgencias] = useState<UrgenciaTicket[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
+  // Get reference data from context
+  const {
+    estados,
+    importancias,
+    urgencias,
+    servicios,
+    isLoading: isLoadingReferenceData,
+  } = useTicketsReferenceData();
 
-  // Fetch dropdown options when modal opens
+  // Only fetch operator users and reservas (specific to this modal)
+  const [users, setUsers] = useState<User[]>([]);
+  const [reservas, setReservas] = useState<Reserva[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [isLoadingReservas, setIsLoadingReservas] = useState(false);
+
+  // Fetch operator users and reservas when modal opens
   useEffect(() => {
     if (open) {
-      fetchDropdownOptions();
+      fetchOperatorUsers();
+      fetchReservas();
     }
   }, [open]);
 
-  const fetchDropdownOptions = async () => {
-    setIsLoadingOptions(true);
+  const fetchOperatorUsers = async () => {
+    setIsLoadingUsers(true);
     try {
-      const [
-        serviciosData,
-        estadosData,
-        importanciasData,
-        urgenciasData,
-        usersData,
-      ] = await Promise.all([
-        apiClient.get<Servicio[]>("/api/servicio"),
-        apiClient.get<EstadoTicket[]>("/api/estado-ticket"),
-        apiClient.get<ImportanciaTicket[]>("/api/importancia-ticket"),
-        apiClient.get<UrgenciaTicket[]>("/api/urgencia-ticket"),
-        apiClient.get<{ users: User[] } | User[]>(
-          "/api/auth/admin/list-users?filterField=role&filterValue=operator",
-        ),
-      ]);
-
-      setServicios(serviciosData);
-      setEstados(estadosData);
-      setImportancias(importanciasData);
-      setUrgencias(urgenciasData);
-      // Handle both response structures
+      const usersData = await apiClient.get<{ users: User[] } | User[]>(
+        "/api/auth/admin/list-users?filterField=role&filterValue=operator",
+      );
       setUsers(Array.isArray(usersData) ? usersData : usersData.users);
     } catch (error) {
       toast({
         title: "Error",
-        description: <>No se pudieron cargar las opciones del formulario</>,
+        description: <>No se pudieron cargar los usuarios</>,
         variant: "destructive",
       });
     } finally {
-      setIsLoadingOptions(false);
+      setIsLoadingUsers(false);
+    }
+  };
+
+  const fetchReservas = async () => {
+    setIsLoadingReservas(true);
+    try {
+      const reservasData = await apiClient.get<Reserva[]>("/api/reserva");
+      setReservas(reservasData);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: <>No se pudieron cargar las reservas</>,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingReservas(false);
     }
   };
 
@@ -126,6 +130,7 @@ export function TicketModal({
       setHasta(ticket.hasta ? ticket.hasta.split("T")[0] : "");
       setIdServicio(ticket.id_servicio.toString());
       setIdUser(ticket.id_user || "");
+      setIdReserva(ticket.id_reserva?.toString() || "");
       setIdEstado(ticket.estado?.id.toString() || "");
       setIdImportancia(ticket.importancia?.id.toString() || "");
       setIdUrgencia(ticket.urgencia?.id.toString() || "");
@@ -136,6 +141,7 @@ export function TicketModal({
       setHasta("");
       setIdServicio("");
       setIdUser("");
+      setIdReserva("");
       setIdEstado("");
       setIdImportancia("");
       setIdUrgencia("");
@@ -154,6 +160,7 @@ export function TicketModal({
         hasta: hasta || undefined,
         id_servicio: Number.parseInt(idServicio),
         id_user: idUser || undefined,
+        id_reserva: idReserva ? Number.parseInt(idReserva) : undefined,
         id_estado: Number.parseInt(idEstado),
         id_importancia: idImportancia
           ? Number.parseInt(idImportancia)
@@ -168,8 +175,8 @@ export function TicketModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+        <DialogHeader className="pb-4">
           <DialogTitle>{ticket ? "Editar Ticket" : "Crear Ticket"}</DialogTitle>
           <DialogDescription>
             {ticket
@@ -177,7 +184,7 @@ export function TicketModal({
               : "Completa el formulario para crear un nuevo ticket"}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 px-1">
           <div className="space-y-2">
             <Label htmlFor="nombre">Nombre *</Label>
             <Input
@@ -230,7 +237,12 @@ export function TicketModal({
               <Select
                 value={idServicio}
                 onValueChange={setIdServicio}
-                disabled={isLoading || isLoadingOptions}
+                disabled={
+                  isLoading ||
+                  isLoadingReferenceData ||
+                  isLoadingUsers ||
+                  isLoadingReservas
+                }
               >
                 <SelectTrigger id="idServicio">
                   <SelectValue placeholder="Selecciona un servicio" />
@@ -253,7 +265,12 @@ export function TicketModal({
               <Select
                 value={idEstado}
                 onValueChange={setIdEstado}
-                disabled={isLoading || isLoadingOptions}
+                disabled={
+                  isLoading ||
+                  isLoadingReferenceData ||
+                  isLoadingUsers ||
+                  isLoadingReservas
+                }
               >
                 <SelectTrigger id="idEstado">
                   <SelectValue placeholder="Selecciona un estado" />
@@ -275,13 +292,18 @@ export function TicketModal({
               <Select
                 value={idImportancia}
                 onValueChange={setIdImportancia}
-                disabled={isLoading || isLoadingOptions}
+                disabled={
+                  isLoading ||
+                  isLoadingReferenceData ||
+                  isLoadingUsers ||
+                  isLoadingReservas
+                }
               >
                 <SelectTrigger id="idImportancia">
                   <SelectValue placeholder="Selecciona importancia" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="0">Ninguna</SelectItem>
+                  <SelectItem value="null">Ninguna</SelectItem>
                   {importancias.map((importancia) => (
                     <SelectItem
                       key={importancia.id}
@@ -299,7 +321,12 @@ export function TicketModal({
               <Select
                 value={idUrgencia}
                 onValueChange={setIdUrgencia}
-                disabled={isLoading || isLoadingOptions}
+                disabled={
+                  isLoading ||
+                  isLoadingReferenceData ||
+                  isLoadingUsers ||
+                  isLoadingReservas
+                }
               >
                 <SelectTrigger id="idUrgencia">
                   <SelectValue placeholder="Selecciona urgencia" />
@@ -319,25 +346,57 @@ export function TicketModal({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="idUser">Asignar a</Label>
-            <Select
-              value={idUser}
-              onValueChange={setIdUser}
-              disabled={isLoading || isLoadingOptions}
-            >
-              <SelectTrigger id="idUser">
-                <SelectValue placeholder="Selecciona un usuario" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0">Sin asignar</SelectItem>
-                {users.map((user) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.name} ({user.email})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="idUser">Asignar a</Label>
+              <Select
+                value={idUser}
+                onValueChange={setIdUser}
+                disabled={
+                  isLoading ||
+                  isLoadingReferenceData ||
+                  isLoadingUsers ||
+                  isLoadingReservas
+                }
+              >
+                <SelectTrigger id="idUser">
+                  <SelectValue placeholder="Selecciona un usuario" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Sin asignar</SelectItem>
+                  {users.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name} ({user.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="idReserva">Reserva asociada</Label>
+              <Select
+                value={idReserva}
+                onValueChange={setIdReserva}
+                disabled={
+                  isLoading || isLoadingReferenceData || isLoadingReservas
+                }
+              >
+                <SelectTrigger id="idReserva">
+                  <SelectValue placeholder="Selecciona una reserva" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Sin reserva</SelectItem>
+                  {reservas.map((reserva) => (
+                    <SelectItem key={reserva.id} value={reserva.id.toString()}>
+                      #{reserva.id} - {reserva.patenteVehiculo}
+                      {reserva.slot &&
+                        ` (${new Date(reserva.slot.inicio).toLocaleDateString()})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
@@ -349,7 +408,15 @@ export function TicketModal({
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={isLoading || isLoadingOptions}>
+            <Button
+              type="submit"
+              disabled={
+                isLoading ||
+                isLoadingReferenceData ||
+                isLoadingUsers ||
+                isLoadingReservas
+              }
+            >
               {isLoading ? (
                 <>
                   <Spinner className="mr-2 h-4 w-4" />

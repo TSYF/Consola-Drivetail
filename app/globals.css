@@ -4,74 +4,92 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(0.98 0 0);
-  --foreground: oklch(0.15 0 0);
+  /* Light lavender background like mobile app */
+  --background: oklch(0.93 0.02 265);
+  --foreground: oklch(0.25 0.03 250);
+  /* White cards */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.15 0 0);
+  --card-foreground: oklch(0.25 0.03 250);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.15 0 0);
-  --primary: oklch(0.45 0.18 255);
+  --popover-foreground: oklch(0.25 0.03 250);
+  /* Blue accent from mobile app buttons */
+  --primary: oklch(0.65 0.12 230);
   --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.92 0.01 255);
-  --secondary-foreground: oklch(0.15 0 0);
-  --muted: oklch(0.96 0.005 255);
-  --muted-foreground: oklch(0.48 0.02 255);
-  --accent: oklch(0.92 0.02 255);
-  --accent-foreground: oklch(0.15 0 0);
-  --destructive: oklch(0.55 0.22 25);
+  /* Light purple/lavender secondary */
+  --secondary: oklch(0.88 0.03 265);
+  --secondary-foreground: oklch(0.25 0.03 250);
+  /* Muted lavender tones */
+  --muted: oklch(0.90 0.02 265);
+  --muted-foreground: oklch(0.50 0.03 250);
+  /* Purple accent like mobile app */
+  --accent: oklch(0.62 0.24 290);
+  --accent-foreground: oklch(0.98 0 0);
+  /* Red destructive actions */
+  --destructive: oklch(0.60 0.22 25);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.88 0.01 255);
-  --input: oklch(0.88 0.01 255);
-  --ring: oklch(0.45 0.18 255);
-  --chart-1: oklch(0.55 0.20 255);
-  --chart-2: oklch(0.60 0.18 180);
-  --chart-3: oklch(0.50 0.15 140);
-  --chart-4: oklch(0.65 0.16 80);
-  --chart-5: oklch(0.58 0.19 25);
-  --radius: 0.5rem;
-  --sidebar: oklch(0.18 0.02 255);
-  --sidebar-foreground: oklch(0.92 0.01 255);
-  --sidebar-primary: oklch(0.55 0.20 255);
+  /* Subtle borders */
+  --border: oklch(0.85 0.02 265);
+  --input: oklch(0.85 0.02 265);
+  --ring: oklch(0.65 0.12 230);
+  /* Chart colors matching mobile app accent colors */
+  --chart-1: oklch(0.65 0.12 230); /* Blue */
+  --chart-2: oklch(0.70 0.15 60); /* Orange */
+  --chart-3: oklch(0.72 0.17 145); /* Green */
+  --chart-4: oklch(0.62 0.24 290); /* Purple */
+  --chart-5: oklch(0.60 0.22 25); /* Red */
+  --radius: 0.75rem;
+  /* Dark blue-gray sidebar matching mobile app header */
+  --sidebar: oklch(0.40 0.03 250);
+  --sidebar-foreground: oklch(0.92 0.01 265);
+  --sidebar-primary: oklch(0.65 0.12 230);
   --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.26 0.02 255);
-  --sidebar-accent-foreground: oklch(0.92 0.01 255);
-  --sidebar-border: oklch(0.26 0.02 255);
-  --sidebar-ring: oklch(0.55 0.20 255);
+  --sidebar-accent: oklch(0.48 0.04 250);
+  --sidebar-accent-foreground: oklch(0.92 0.01 265);
+  --sidebar-border: oklch(0.35 0.03 250);
+  --sidebar-ring: oklch(0.65 0.12 230);
 }
 
 .dark {
-  --background: oklch(0.12 0.01 255);
-  --foreground: oklch(0.92 0.01 255);
-  --card: oklch(0.16 0.01 255);
-  --card-foreground: oklch(0.92 0.01 255);
-  --popover: oklch(0.16 0.01 255);
-  --popover-foreground: oklch(0.92 0.01 255);
-  --primary: oklch(0.60 0.22 255);
+  /* Dark navy background with slight purple tint */
+  --background: oklch(0.15 0.02 250);
+  --foreground: oklch(0.92 0.01 265);
+  /* Slightly lighter cards */
+  --card: oklch(0.20 0.02 250);
+  --card-foreground: oklch(0.92 0.01 265);
+  --popover: oklch(0.20 0.02 250);
+  --popover-foreground: oklch(0.92 0.01 265);
+  /* Brighter blue for dark mode */
+  --primary: oklch(0.68 0.14 230);
   --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.24 0.02 255);
-  --secondary-foreground: oklch(0.92 0.01 255);
-  --muted: oklch(0.22 0.02 255);
-  --muted-foreground: oklch(0.65 0.02 255);
-  --accent: oklch(0.24 0.02 255);
-  --accent-foreground: oklch(0.92 0.01 255);
-  --destructive: oklch(0.50 0.20 25);
+  /* Muted purple secondary */
+  --secondary: oklch(0.28 0.03 265);
+  --secondary-foreground: oklch(0.92 0.01 265);
+  --muted: oklch(0.25 0.02 250);
+  --muted-foreground: oklch(0.65 0.02 265);
+  /* Purple accent */
+  --accent: oklch(0.65 0.24 290);
+  --accent-foreground: oklch(0.98 0 0);
+  /* Red destructive */
+  --destructive: oklch(0.62 0.22 25);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.24 0.02 255);
-  --input: oklch(0.24 0.02 255);
-  --ring: oklch(0.60 0.22 255);
-  --chart-1: oklch(0.60 0.22 255);
-  --chart-2: oklch(0.65 0.18 180);
-  --chart-3: oklch(0.55 0.15 140);
-  --chart-4: oklch(0.70 0.16 80);
-  --chart-5: oklch(0.62 0.19 25);
-  --sidebar: oklch(0.16 0.01 255);
-  --sidebar-foreground: oklch(0.92 0.01 255);
-  --sidebar-primary: oklch(0.60 0.22 255);
+  --border: oklch(0.28 0.02 250);
+  --input: oklch(0.28 0.02 250);
+  --ring: oklch(0.68 0.14 230);
+  /* Chart colors matching mobile app */
+  --chart-1: oklch(0.68 0.14 230); /* Blue */
+  --chart-2: oklch(0.72 0.15 60); /* Orange */
+  --chart-3: oklch(0.74 0.17 145); /* Green */
+  --chart-4: oklch(0.65 0.24 290); /* Purple */
+  --chart-5: oklch(0.62 0.22 25); /* Red */
+  /* Very dark blue-gray sidebar */
+  --sidebar: oklch(0.18 0.02 250);
+  --sidebar-foreground: oklch(0.92 0.01 265);
+  --sidebar-primary: oklch(0.68 0.14 230);
   --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.24 0.02 255);
-  --sidebar-accent-foreground: oklch(0.92 0.01 255);
-  --sidebar-border: oklch(0.24 0.02 255);
-  --sidebar-ring: oklch(0.60 0.22 255);
+  --sidebar-accent: oklch(0.26 0.03 250);
+  --sidebar-accent-foreground: oklch(0.92 0.01 265);
+  --sidebar-border: oklch(0.26 0.02 250);
+  --sidebar-ring: oklch(0.68 0.14 230);
 }
 
 @theme inline {

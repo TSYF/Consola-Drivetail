@@ -65,7 +65,7 @@ const initialCards: StatCardData[] = [
   },
 ];
 
-export default function DashboardSectionOne() {
+export default function StatCardsSection() {
   const [cards, setCards] = useState<StatCardData[]>(initialCards);
 
   const sensors = useSensors(
@@ -99,7 +99,7 @@ export default function DashboardSectionOne() {
       onDragEnd={handleDragEnd}
     >
       <SortableContext items={cards} strategy={rectSortingStrategy}>
-        <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {cards.map((card) => (
             <StatCard
               key={card.id}
@@ -111,7 +111,7 @@ export default function DashboardSectionOne() {
               trend={card.trend}
             />
           ))}
-        </section>
+        </div>
       </SortableContext>
     </DndContext>
   );

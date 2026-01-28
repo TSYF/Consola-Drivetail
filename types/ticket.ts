@@ -23,9 +23,11 @@ export interface Ticket {
   updated_at: string
   id_servicio: number
   id_user?: string
+  id_reserva?: number
   id_estado: number
   id_importancia?: number
   id_urgencia?: number
+  display_order?: number
   estado: EstadoTicket
   importancia?: ImportanciaTicket
   urgencia?: UrgenciaTicket
@@ -38,6 +40,11 @@ export interface Ticket {
     name: string
     email: string
   }
+  reserva?: {
+    id: number
+    fecha_inicio: string
+    fecha_fin: string
+  }
 }
 
 export interface CreateTicketDto {
@@ -47,6 +54,7 @@ export interface CreateTicketDto {
   hasta?: string
   id_servicio: number
   id_user?: string
+  id_reserva?: number
   id_estado: number
   id_importancia?: number
   id_urgencia?: number

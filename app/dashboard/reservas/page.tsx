@@ -9,7 +9,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Plus, RefreshCw, Edit, Trash2, Clock, Layers } from "lucide-react";
+import {
+  Plus,
+  RefreshCw,
+  Edit,
+  Trash2,
+  Clock,
+  Layers,
+  Filter,
+  Calendar as CalendarIcon,
+  X,
+} from "lucide-react";
 import {
   Table,
   TableBody,
@@ -19,6 +29,29 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { apiClient } from "@/lib/api-client";
 import type { Reserva, Slot } from "@/types/reserva";
 import { ReservaModal } from "@/app/dashboard/reservas/_components/reserva-modal";
@@ -27,23 +60,66 @@ import { SlotBatchModal } from "@/app/dashboard/reservas/_components/slot-batch-
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { type DateRange } from "react-day-picker";
 
 export default function ReservasPage() {
   const [reservas, setReservas] = useState<Reserva[]>([]);
+  const [totalReservas, setTotalReservas] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editing, setEditing] = useState<Reserva | null>(null);
 
+  // Reservas filters and pagination
+  const [reservasPage, setReservasPage] = useState(1);
+  const [reservasLimit] = useState(10);
+  const [reservasDateRange, setReservasDateRange] = useState<
+    DateRange | undefined
+  >();
+  const [reservasStatusFilter, setReservasStatusFilter] =
+    useState<string>("all");
+  const [reservasSearchPatente, setReservasSearchPatente] = useState("");
+
   const [slots, setSlots] = useState<Slot[]>([]);
+  const [totalSlots, setTotalSlots] = useState(0);
   const [isSlotsLoading, setIsSlotsLoading] = useState(true);
   const [isSingleSlotModalOpen, setIsSingleSlotModalOpen] = useState(false);
   const [isBatchSlotModalOpen, setIsBatchSlotModalOpen] = useState(false);
 
+  // Slots filters and pagination
+  const [slotsPage, setSlotsPage] = useState(1);
+  const [slotsLimit] = useState(10);
+  const [slotsDateRange, setSlotsDateRange] = useState<DateRange | undefined>();
+  const [slotsStatusFilter, setSlotsStatusFilter] = useState<string>("all");
+
   const fetchReservas = async () => {
     try {
       setIsLoading(true);
-      const data = await apiClient.get<Reserva[]>("/api/reserva");
+      const offset = (reservasPage - 1) * reservasLimit;
+      const params = new URLSearchParams({
+        limit: reservasLimit.toString(),
+        offset: offset.toString(),
+      });
+
+      if (reservasDateRange?.from) {
+        params.append("dateFrom", format(reservasDateRange.from, "yyyy-MM-dd"));
+      }
+      if (reservasDateRange?.to) {
+        params.append("dateTo", format(reservasDateRange.to, "yyyy-MM-dd"));
+      }
+      if (reservasStatusFilter !== "all") {
+        params.append("status", reservasStatusFilter);
+      }
+      if (reservasSearchPatente) {
+        params.append("patente", reservasSearchPatente);
+      }
+
+      const { data, headers } = await apiClient.getWithHeaders<Reserva[]>(
+        `/api/reserva?${params.toString()}`,
+      );
+
       setReservas(data);
+      const totalCount = headers.get("X-Total-Count");
+      setTotalReservas(totalCount ? parseInt(totalCount, 10) : 0);
     } catch (error) {
       toast({
         title: "Error",
@@ -58,8 +134,32 @@ export default function ReservasPage() {
   const fetchSlots = async () => {
     try {
       setIsSlotsLoading(true);
-      const data = await apiClient.get<Slot[]>("/api/slot");
+      const offset = (slotsPage - 1) * slotsLimit;
+      const params = new URLSearchParams({
+        limit: slotsLimit.toString(),
+        offset: offset.toString(),
+      });
+
+      if (slotsDateRange?.from) {
+        params.append("dateFrom", format(slotsDateRange.from, "yyyy-MM-dd"));
+      }
+      if (slotsDateRange?.to) {
+        params.append("dateTo", format(slotsDateRange.to, "yyyy-MM-dd"));
+      }
+      if (slotsStatusFilter !== "all") {
+        params.append(
+          "ocupado",
+          slotsStatusFilter === "ocupado" ? "true" : "false",
+        );
+      }
+
+      const { data, headers } = await apiClient.getWithHeaders<Slot[]>(
+        `/api/slot?${params.toString()}`,
+      );
+
       setSlots(data);
+      const totalCount = headers.get("X-Total-Count");
+      setTotalSlots(totalCount ? parseInt(totalCount, 10) : 0);
     } catch (error) {
       toast({
         title: "Error",
@@ -73,8 +173,18 @@ export default function ReservasPage() {
 
   useEffect(() => {
     fetchReservas();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    reservasPage,
+    reservasDateRange,
+    reservasStatusFilter,
+    reservasSearchPatente,
+  ]);
+
+  useEffect(() => {
     fetchSlots();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slotsPage, slotsDateRange, slotsStatusFilter]);
 
   const handleDelete = async (id: number) => {
     if (!confirm("¿Estás seguro de eliminar esta reserva?")) return;
@@ -154,10 +264,122 @@ export default function ReservasPage() {
         <CardHeader>
           <CardTitle>Lista de Reservas</CardTitle>
           <CardDescription>
-            {reservas.length} reserva{reservas.length !== 1 ? "s" : ""}
+            Total: {totalReservas} reserva{totalReservas !== 1 ? "s" : ""}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* Reservas Filters */}
+          <div className="flex flex-wrap gap-4 items-end">
+            <div className="flex-1 min-w-[200px]">
+              <Label htmlFor="patente-search">Buscar por Patente</Label>
+              <Input
+                id="patente-search"
+                placeholder="Buscar patente..."
+                value={reservasSearchPatente}
+                onChange={(e) => {
+                  setReservasSearchPatente(e.target.value);
+                  setReservasPage(1);
+                }}
+              />
+            </div>
+
+            <div className="min-w-[180px]">
+              <Label>Filtrar por Fechas</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {reservasDateRange?.from ? (
+                      reservasDateRange.to ? (
+                        <>
+                          {format(reservasDateRange.from, "dd/MM", {
+                            locale: es,
+                          })}{" "}
+                          -{" "}
+                          {format(reservasDateRange.to, "dd/MM", {
+                            locale: es,
+                          })}
+                        </>
+                      ) : (
+                        format(reservasDateRange.from, "dd/MM/yyyy", {
+                          locale: es,
+                        })
+                      )
+                    ) : (
+                      <span>Seleccionar fechas</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="range"
+                    selected={reservasDateRange}
+                    onSelect={(range) => {
+                      setReservasDateRange(range);
+                      setReservasPage(1);
+                    }}
+                    numberOfMonths={2}
+                  />
+                  {reservasDateRange && (
+                    <div className="p-3 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => {
+                          setReservasDateRange(undefined);
+                          setReservasPage(1);
+                        }}
+                      >
+                        Limpiar filtro
+                      </Button>
+                    </div>
+                  )}
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="min-w-[150px]">
+              <Label>Estado</Label>
+              <Select
+                value={reservasStatusFilter}
+                onValueChange={(value) => {
+                  setReservasStatusFilter(value);
+                  setReservasPage(1);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="1">Pendiente</SelectItem>
+                  <SelectItem value="2">Confirmada</SelectItem>
+                  <SelectItem value="3">Completada</SelectItem>
+                  <SelectItem value="4">Cancelada</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                setReservasDateRange(undefined);
+                setReservasStatusFilter("all");
+                setReservasSearchPatente("");
+                setReservasPage(1);
+              }}
+              title="Limpiar filtros"
+              className="ms-auto"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -197,11 +419,14 @@ export default function ReservasPage() {
                         {reserva.cliente?.nombre || `ID: ${reserva.idCliente}`}
                       </TableCell>
                       <TableCell>
-                        {reserva.servicio?.nombre || `ID: ${reserva.idServicio}`}
+                        {reserva.servicio?.nombre ||
+                          `ID: ${reserva.idServicio}`}
                       </TableCell>
                       <TableCell>
                         {reserva.estado ? (
-                          <Badge variant="outline">{reserva.estado.nombre}</Badge>
+                          <Badge variant="outline">
+                            {reserva.estado.nombre}
+                          </Badge>
                         ) : (
                           `ID: ${reserva.idEstado}`
                         )}
@@ -233,6 +458,57 @@ export default function ReservasPage() {
               )}
             </TableBody>
           </Table>
+
+          {/* Reservas Pagination */}
+          {totalReservas > reservasLimit && (
+            <div className="flex justify-center">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => setReservasPage((p) => Math.max(1, p - 1))}
+                      className={
+                        reservasPage === 1
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer"
+                      }
+                    />
+                  </PaginationItem>
+                  {Array.from({
+                    length: Math.ceil(totalReservas / reservasLimit),
+                  }).map((_, i) => (
+                    <PaginationItem key={i}>
+                      <PaginationLink
+                        onClick={() => setReservasPage(i + 1)}
+                        isActive={reservasPage === i + 1}
+                        className="cursor-pointer"
+                      >
+                        {i + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() =>
+                        setReservasPage((p) =>
+                          Math.min(
+                            Math.ceil(totalReservas / reservasLimit),
+                            p + 1,
+                          ),
+                        )
+                      }
+                      className={
+                        reservasPage ===
+                        Math.ceil(totalReservas / reservasLimit)
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer"
+                      }
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -242,19 +518,14 @@ export default function ReservasPage() {
             <div>
               <CardTitle>Gestión de Slots</CardTitle>
               <CardDescription>
-                {slots.length} slot{slots.length !== 1 ? "s" : ""} en total (
+                Total: {totalSlots} slot{totalSlots !== 1 ? "s" : ""} (
                 {slots.filter((s) => !s.ocupado).length} libre
                 {slots.filter((s) => !s.ocupado).length !== 1 ? "s" : ""})
               </CardDescription>
             </div>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={fetchSlots}
-              >
+              <Button variant="outline" size="sm" onClick={fetchSlots}>
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Actualizar
               </Button>
               <Button
                 variant="outline"
@@ -264,17 +535,105 @@ export default function ReservasPage() {
                 <Clock className="h-4 w-4 mr-2" />
                 Nuevo Slot
               </Button>
-              <Button
-                size="sm"
-                onClick={() => setIsBatchSlotModalOpen(true)}
-              >
+              <Button size="sm" onClick={() => setIsBatchSlotModalOpen(true)}>
                 <Layers className="h-4 w-4 mr-2" />
                 Crear en Lote
               </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* Slots Filters */}
+          <div className="flex flex-wrap gap-4 items-end">
+            <div className="min-w-[180px]">
+              <Label>Filtrar por Fechas</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {slotsDateRange?.from ? (
+                      slotsDateRange.to ? (
+                        <>
+                          {format(slotsDateRange.from, "dd/MM", { locale: es })}{" "}
+                          - {format(slotsDateRange.to, "dd/MM", { locale: es })}
+                        </>
+                      ) : (
+                        format(slotsDateRange.from, "dd/MM/yyyy", {
+                          locale: es,
+                        })
+                      )
+                    ) : (
+                      <span>Seleccionar fechas</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="range"
+                    selected={slotsDateRange}
+                    onSelect={(range) => {
+                      setSlotsDateRange(range);
+                      setSlotsPage(1);
+                    }}
+                    numberOfMonths={2}
+                  />
+                  {slotsDateRange && (
+                    <div className="p-3 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => {
+                          setSlotsDateRange(undefined);
+                          setSlotsPage(1);
+                        }}
+                      >
+                        Limpiar filtro
+                      </Button>
+                    </div>
+                  )}
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="min-w-[150px]">
+              <Label>Estado</Label>
+              <Select
+                value={slotsStatusFilter}
+                onValueChange={(value) => {
+                  setSlotsStatusFilter(value);
+                  setSlotsPage(1);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="libre">Libre</SelectItem>
+                  <SelectItem value="ocupado">Ocupado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                setSlotsDateRange(undefined);
+                setSlotsStatusFilter("all");
+                setSlotsPage(1);
+              }}
+              title="Limpiar filtros"
+              className="ms-auto"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -335,6 +694,53 @@ export default function ReservasPage() {
               )}
             </TableBody>
           </Table>
+
+          {/* Slots Pagination */}
+          {totalSlots > slotsLimit && (
+            <div className="flex justify-center">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => setSlotsPage((p) => Math.max(1, p - 1))}
+                      className={
+                        slotsPage === 1
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer"
+                      }
+                    />
+                  </PaginationItem>
+                  {Array.from({
+                    length: Math.ceil(totalSlots / slotsLimit),
+                  }).map((_, i) => (
+                    <PaginationItem key={i}>
+                      <PaginationLink
+                        onClick={() => setSlotsPage(i + 1)}
+                        isActive={slotsPage === i + 1}
+                        className="cursor-pointer"
+                      >
+                        {i + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() =>
+                        setSlotsPage((p) =>
+                          Math.min(Math.ceil(totalSlots / slotsLimit), p + 1),
+                        )
+                      }
+                      className={
+                        slotsPage === Math.ceil(totalSlots / slotsLimit)
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer"
+                      }
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </CardContent>
       </Card>
 

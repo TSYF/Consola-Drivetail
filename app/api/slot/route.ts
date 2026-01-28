@@ -6,8 +6,9 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL
 export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get('auth_token')?.value
+    const params = request.nextUrl.searchParams;
 
-    const response = await fetch(`${API_URL}/api/slot`, {
+    const response = await fetch(`${API_URL}/api/slot?${params.toString()}`, {
       headers: {
         Authorization: token ? `Bearer ${token}` : '',
         'Content-Type': 'application/json',
@@ -23,7 +24,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    return NextResponse.json(data)
+    const apiResponse = NextResponse.json(data);
+    apiResponse.headers.set('X-Total-Count', response.headers.get('X-Total-Count') || '0');
+
+    return apiResponse;
   } catch (error) {
     console.error('[v0] Error fetching slots:', error)
     return NextResponse.json(

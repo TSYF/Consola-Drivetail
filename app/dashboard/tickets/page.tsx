@@ -1,23 +1,17 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import {
-  Ticket,
-  TicketFilters,
-  EstadoTicket,
-  ImportanciaTicket,
-  UrgenciaTicket,
-} from "@/types/ticket";
-import { Servicio } from "@/types/servicio";
-import { User } from "@/lib/auth";
+import { Ticket, TicketFilters } from "@/types/ticket";
 import { apiClient } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { TicketsTable } from "@/app/dashboard/tickets/_components/organisms/tickets-table";
 import { TicketsKanban } from "@/app/dashboard/tickets/_components/organisms/tickets-kanban";
 import { TicketModal } from "@/app/dashboard/tickets/_components/organisms/ticket-modal";
 import { TicketDetailSheet } from "@/app/dashboard/tickets/_components/organisms/ticket-detail-sheet";
+import { ReservaDetailSheet } from "@/app/dashboard/tickets/_components/organisms/reserva-detail-sheet";
 import { DeleteTicketDialog } from "@/app/dashboard/tickets/_components/organisms/delete-ticket-dialog";
 import { TicketsToolbar } from "@/app/dashboard/tickets/_components/organisms/tickets-toolbar";
+import { TicketsReferenceDataProvider } from "@/app/dashboard/tickets/_components/context/tickets-reference-data-context";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/hooks/use-toast";
 import { LayoutGrid, Plus, Table } from "lucide-react";
@@ -27,7 +21,14 @@ export default function TicketsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTicket, setEditingTicket] = useState<Ticket | undefined>();
-  const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
+  const [viewMode, setViewMode] = useState<"table" | "kanban">(() => {
+    // Load saved preference from localStorage
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("tickets-view-mode");
+      return (saved === "table" || saved === "kanban") ? saved : "table";
+    }
+    return "table";
+  });
 
   // Filtering state
   const [filters, setFilters] = useState<TicketFilters>({});
@@ -36,16 +37,15 @@ export default function TicketsPage() {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [isDetailSheetOpen, setIsDetailSheetOpen] = useState(false);
 
+  // Reservation detail sheet state
+  const [selectedReservaId, setSelectedReservaId] = useState<number | null>(
+    null,
+  );
+  const [isReservaDetailOpen, setIsReservaDetailOpen] = useState(false);
+
   // Delete dialog state
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [ticketToDelete, setTicketToDelete] = useState<Ticket | null>(null);
-
-  // Filter options state
-  const [estados, setEstados] = useState<EstadoTicket[]>([]);
-  const [importancias, setImportancias] = useState<ImportanciaTicket[]>([]);
-  const [urgencias, setUrgencias] = useState<UrgenciaTicket[]>([]);
-  const [servicios, setServicios] = useState<Servicio[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
 
   const fetchTickets = async () => {
     try {
@@ -62,37 +62,14 @@ export default function TicketsPage() {
     }
   };
 
-  const fetchFilterOptions = async () => {
-    try {
-      const [
-        estadosData,
-        importanciasData,
-        urgenciasData,
-        serviciosData,
-        usersData,
-      ] = await Promise.all([
-        apiClient.get<EstadoTicket[]>("/api/estado-ticket"),
-        apiClient.get<ImportanciaTicket[]>("/api/importancia-ticket"),
-        apiClient.get<UrgenciaTicket[]>("/api/urgencia-ticket"),
-        apiClient.get<Servicio[]>("/api/servicio"),
-        apiClient.get<{ users: User[] } | User[]>("/api/auth/admin/list-users"),
-      ]);
-
-      setEstados(estadosData);
-      setImportancias(importanciasData);
-      setUrgencias(urgenciasData);
-      setServicios(serviciosData);
-      // Handle both response structures
-      setUsers(Array.isArray(usersData) ? usersData : usersData.users);
-    } catch (error) {
-      // Silently fail - filters will just be empty
-    }
-  };
-
   useEffect(() => {
     fetchTickets();
-    fetchFilterOptions();
   }, []);
+
+  // Save view mode preference to localStorage
+  useEffect(() => {
+    localStorage.setItem("tickets-view-mode", viewMode);
+  }, [viewMode]);
 
   // Apply filters to tickets
   const filteredTickets = useMemo(() => {
@@ -180,6 +157,11 @@ export default function TicketsPage() {
     setIsDetailSheetOpen(true);
   };
 
+  const handleViewReservation = (reservaId: number) => {
+    setSelectedReservaId(reservaId);
+    setIsReservaDetailOpen(true);
+  };
+
   const handleDeleteClick = (ticket: Ticket) => {
     setTicketToDelete(ticket);
     setIsDeleteDialogOpen(true);
@@ -243,6 +225,32 @@ export default function TicketsPage() {
     }
   };
 
+  const handleTableReorder = async (reorderedTickets: Ticket[]) => {
+    try {
+      // Prepare updates with new display_order
+      const updates = reorderedTickets.map((ticket, index) => ({
+        id: ticket.id,
+        order: index + 1,
+      }));
+
+      await apiClient.post("/api/ticket.reorder", {
+        view: "table",
+        updates,
+      });
+
+      // Update local state
+      setTickets(reorderedTickets);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: <>No se pudo reordenar los tickets</>,
+        variant: "destructive",
+      });
+      // Revert to original order
+      fetchTickets();
+    }
+  };
+
   const hasActiveFilters =
     filters.search ||
     filters.status?.length ||
@@ -254,45 +262,38 @@ export default function TicketsPage() {
     filters.dateTo;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Tickets</h1>
-          <p className="text-muted-foreground mt-2">
-            Gestiona los tickets del sistema
-          </p>
+    <TicketsReferenceDataProvider>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Tickets</h1>
+            <p className="text-muted-foreground mt-2">
+              Gestiona los tickets del sistema
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant={viewMode === "table" ? "default" : "outline"}
+              size="icon"
+              onClick={() => setViewMode("table")}
+            >
+              <Table className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "kanban" ? "default" : "outline"}
+              size="icon"
+              onClick={() => setViewMode("kanban")}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button onClick={handleCreate}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nuevo Ticket
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant={viewMode === "table" ? "default" : "outline"}
-            size="icon"
-            onClick={() => setViewMode("table")}
-          >
-            <Table className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={viewMode === "kanban" ? "default" : "outline"}
-            size="icon"
-            onClick={() => setViewMode("kanban")}
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </Button>
-          <Button onClick={handleCreate}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo Ticket
-          </Button>
-        </div>
-      </div>
 
-      <TicketsToolbar
-        onFilterChange={setFilters}
-        activeFilters={filters}
-        estados={estados}
-        importancias={importancias}
-        urgencias={urgencias}
-        servicios={servicios}
-        users={users}
-      />
+        <TicketsToolbar onFilterChange={setFilters} activeFilters={filters} />
 
       {hasActiveFilters && (
         <p className="text-sm text-muted-foreground">
@@ -324,6 +325,7 @@ export default function TicketsPage() {
           onEdit={handleEdit}
           onDelete={handleDeleteClick}
           onTicketClick={handleTicketClick}
+          onReorder={handleTableReorder}
         />
       ) : (
         <TicketsKanban
@@ -352,6 +354,13 @@ export default function TicketsPage() {
         }}
         onDelete={handleDeleteClick}
         onUpdate={fetchTickets}
+        onViewReservation={handleViewReservation}
+      />
+
+      <ReservaDetailSheet
+        reservaId={selectedReservaId}
+        open={isReservaDetailOpen}
+        onOpenChange={setIsReservaDetailOpen}
       />
 
       <DeleteTicketDialog
@@ -360,6 +369,7 @@ export default function TicketsPage() {
         onOpenChange={setIsDeleteDialogOpen}
         onConfirm={handleConfirmDelete}
       />
-    </div>
+      </div>
+    </TicketsReferenceDataProvider>
   );
 }

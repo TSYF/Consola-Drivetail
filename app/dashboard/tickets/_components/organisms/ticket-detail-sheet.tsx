@@ -12,7 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Edit, Trash2, Calendar, User, Package } from "lucide-react";
+import { Edit, Trash2, Calendar, User, Package, Car, Eye } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -31,6 +31,7 @@ interface TicketDetailSheetProps {
   onEdit: (ticket: Ticket) => void;
   onDelete: (ticket: Ticket) => void;
   onUpdate: () => void;
+  onViewReservation?: (reservaId: number) => void;
 }
 
 export function TicketDetailSheet({
@@ -40,6 +41,7 @@ export function TicketDetailSheet({
   onEdit,
   onDelete,
   onUpdate,
+  onViewReservation,
 }: TicketDetailSheetProps) {
   const [estados, setEstados] = useState<EstadoTicket[]>([]);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -89,15 +91,15 @@ export function TicketDetailSheet({
     switch (importancia?.toLowerCase()) {
       case "alta":
       case "high":
-        return "bg-red-500";
+        return "bg-destructive text-destructive-foreground";
       case "media":
       case "medium":
-        return "bg-yellow-500";
+        return "bg-[#F59E0B] text-white"; // Orange from mobile app
       case "baja":
       case "low":
-        return "bg-green-500";
+        return "bg-[#22C55E] text-white"; // Green from mobile app
       default:
-        return "bg-gray-500";
+        return "bg-muted text-muted-foreground";
     }
   };
 
@@ -105,14 +107,14 @@ export function TicketDetailSheet({
     switch (urgencia?.toLowerCase()) {
       case "urgente":
       case "urgent":
-        return "bg-red-500";
+        return "bg-destructive text-destructive-foreground";
       case "normal":
-        return "bg-blue-500";
+        return "bg-primary text-primary-foreground"; // Blue from mobile app
       case "baja":
       case "low":
-        return "bg-gray-500";
+        return "bg-muted text-muted-foreground";
       default:
-        return "bg-gray-500";
+        return "bg-muted text-muted-foreground";
     }
   };
 
@@ -120,8 +122,8 @@ export function TicketDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-2xl overflow-y-auto">
-        <SheetHeader>
+      <SheetContent className="sm:max-w-2xl overflow-y-auto p-6">
+        <SheetHeader className="pb-6">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
@@ -235,6 +237,48 @@ export function TicketDetailSheet({
                       </span>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* Associated Reservation */}
+              {ticket.reserva && (
+                <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Car className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">
+                        Reserva Asociada
+                      </span>
+                    </div>
+                    <Badge variant="outline">#{ticket.reserva.id}</Badge>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    {ticket.reserva.fecha_inicio && (
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-muted-foreground">
+                          {new Date(
+                            ticket.reserva.fecha_inicio,
+                          ).toLocaleDateString()}{" "}
+                          -{" "}
+                          {new Date(
+                            ticket.reserva.fecha_fin,
+                          ).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {onViewReservation && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => onViewReservation(ticket.reserva!.id)}
+                    >
+                      <Eye className="mr-2 h-3 w-3" />
+                      Ver Detalles de Reserva
+                    </Button>
+                  )}
                 </div>
               )}
 

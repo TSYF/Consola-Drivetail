@@ -40,6 +40,12 @@ export const apiClient = {
     return response.json()
   },
 
+  async getWithHeaders<T>(url: string): Promise<{ data: T; headers: Headers }> {
+    const response = await fetchWithAuth(url, { method: 'GET' })
+    const data = await response.json()
+    return { data, headers: response.headers }
+  },
+
   async post<T>(url: string, data: unknown): Promise<T> {
     const response = await fetchWithAuth(url, {
       method: 'POST',

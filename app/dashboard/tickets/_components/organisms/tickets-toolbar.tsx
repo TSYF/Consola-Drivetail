@@ -1,14 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  TicketFilters,
-  EstadoTicket,
-  ImportanciaTicket,
-  UrgenciaTicket,
-} from "@/types/ticket";
-import { Servicio } from "@/types/servicio";
-import { User } from "@/lib/auth";
+import { TicketFilters } from "@/types/ticket";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,26 +14,19 @@ import {
 } from "@/components/ui/select";
 import { Search, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { useTicketsReferenceData } from "../context/tickets-reference-data-context";
 
 interface TicketsToolbarProps {
   onFilterChange: (filters: TicketFilters) => void;
   activeFilters: TicketFilters;
-  estados: EstadoTicket[];
-  importancias: ImportanciaTicket[];
-  urgencias: UrgenciaTicket[];
-  servicios: Servicio[];
-  users: User[];
 }
 
 export function TicketsToolbar({
   onFilterChange,
   activeFilters,
-  estados,
-  importancias,
-  urgencias,
-  servicios,
-  users,
 }: TicketsToolbarProps) {
+  const { estados, importancias, urgencias, servicios, users } =
+    useTicketsReferenceData();
   const [searchInput, setSearchInput] = useState(activeFilters.search || "");
 
   // Debounce search input
@@ -110,7 +96,6 @@ export function TicketsToolbar({
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="0">Todos</SelectItem>
               {estados.map((estado) => (
                 <SelectItem key={estado.id} value={estado.id.toString()}>
                   {estado.nombre}
@@ -133,7 +118,6 @@ export function TicketsToolbar({
               <SelectValue placeholder="Importancia" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="0">Todas</SelectItem>
               {importancias.map((importancia) => (
                 <SelectItem
                   key={importancia.id}
@@ -159,7 +143,6 @@ export function TicketsToolbar({
               <SelectValue placeholder="Urgencia" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="0">Todas</SelectItem>
               {urgencias.map((urgencia) => (
                 <SelectItem key={urgencia.id} value={urgencia.id.toString()}>
                   {urgencia.nombre}
@@ -182,7 +165,6 @@ export function TicketsToolbar({
               <SelectValue placeholder="Servicio" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="0">Todos</SelectItem>
               {servicios.map((servicio) => (
                 <SelectItem key={servicio.id} value={servicio.id.toString()}>
                   {servicio.nombre}
@@ -205,7 +187,6 @@ export function TicketsToolbar({
               <SelectValue placeholder="Usuario" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="0">Todos</SelectItem>
               {users.map((user) => (
                 <SelectItem key={user.id} value={user.id}>
                   {user.name}

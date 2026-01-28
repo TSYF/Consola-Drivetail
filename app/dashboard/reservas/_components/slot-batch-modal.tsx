@@ -13,9 +13,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import { Calendar } from "@/components/ui/calendar";
+import { Card, CardContent } from "@/components/ui/card";
 import { apiClient } from "@/lib/api-client";
 import type { CreateSlotBatchDto } from "@/types/reserva";
 import { toast } from "@/hooks/use-toast";
+import { type DateRange } from "react-day-picker";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 interface SlotBatchModalProps {
   isOpen: boolean;
@@ -29,27 +34,36 @@ export function SlotBatchModal({
   onSuccess,
 }: SlotBatchModalProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    inicioDate: "",
-    inicioTime: "",
-    finDate: "",
-    finTime: "",
-    minutes: "30",
-  });
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [startTime, setStartTime] = useState("09:00");
+  const [endTime, setEndTime] = useState("18:00");
+  const [minutes, setMinutes] = useState("30");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!dateRange?.from || !dateRange?.to) {
+      toast({
+        title: "Error",
+        description: <>{"Por favor selecciona un rango de fechas"}</>,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       // Combine date and time into ISO strings
-      const inicio = `${formData.inicioDate}T${formData.inicioTime}:00`;
-      const fin = `${formData.finDate}T${formData.finTime}:00`;
+      const inicioDate = format(dateRange.from, "yyyy-MM-dd");
+      const finDate = format(dateRange.to, "yyyy-MM-dd");
+      const inicio = `${inicioDate}T${startTime}:00`;
+      const fin = `${finDate}T${endTime}:00`;
 
       const createData: CreateSlotBatchDto = {
         inicio,
         fin,
-        minutes: Number(formData.minutes),
+        minutes: Number(minutes),
       };
 
       await apiClient.post("/api/slot.batch", createData);
@@ -58,13 +72,10 @@ export function SlotBatchModal({
         description: <>{"Slots creados correctamente en lote"}</>,
       });
       onSuccess();
-      setFormData({
-        inicioDate: "",
-        inicioTime: "",
-        finDate: "",
-        finTime: "",
-        minutes: "30",
-      });
+      setDateRange(undefined);
+      setStartTime("09:00");
+      setEndTime("18:00");
+      setMinutes("30");
     } catch (error) {
       toast({
         title: "Error",
@@ -78,64 +89,70 @@ export function SlotBatchModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[700px]">
         <DialogHeader>
           <DialogTitle>Crear Slots en Lote</DialogTitle>
           <DialogDescription>
-            Crea múltiples slots entre dos fechas con una duración específica
+            Selecciona un rango de fechas y horarios para crear múltiples slots
+            automáticamente
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Inicio del Período *</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Input
-                    type="date"
-                    value={formData.inicioDate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, inicioDate: e.target.value })
-                    }
-                    required
+              <Label>Selecciona Rango de Fechas *</Label>
+              <Card className="w-fit">
+                <CardContent className="p-3">
+                  <Calendar
+                    mode="range"
+                    defaultMonth={dateRange?.from}
+                    selected={dateRange}
+                    onSelect={setDateRange}
+                    numberOfMonths={2}
+                    captionLayout="dropdown"
+                    className="[--cell-size:--spacing(10)]"
+                    formatters={{
+                      formatMonthDropdown: (date) => {
+                        return date.toLocaleString("default", { month: "long" });
+                      },
+                    }}
                   />
-                </div>
-                <div>
-                  <Input
-                    type="time"
-                    value={formData.inicioTime}
-                    onChange={(e) =>
-                      setFormData({ ...formData, inicioTime: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-              </div>
+                </CardContent>
+              </Card>
+              {dateRange?.from && dateRange?.to && (
+                <p className="text-sm text-muted-foreground">
+                  Desde:{" "}
+                  <span className="font-medium">
+                    {format(dateRange.from, "PP", { locale: es })}
+                  </span>{" "}
+                  hasta{" "}
+                  <span className="font-medium">
+                    {format(dateRange.to, "PP", { locale: es })}
+                  </span>
+                </p>
+              )}
             </div>
 
-            <div className="space-y-2">
-              <Label>Fin del Período *</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Input
-                    type="date"
-                    value={formData.finDate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, finDate: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                <div>
-                  <Input
-                    type="time"
-                    value={formData.finTime}
-                    onChange={(e) =>
-                      setFormData({ ...formData, finTime: e.target.value })
-                    }
-                    required
-                  />
-                </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="startTime">Hora de Inicio *</Label>
+                <Input
+                  id="startTime"
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="endTime">Hora de Fin *</Label>
+                <Input
+                  id="endTime"
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  required
+                />
               </div>
             </div>
 
@@ -145,15 +162,14 @@ export function SlotBatchModal({
                 id="minutes"
                 type="number"
                 min="1"
-                value={formData.minutes}
-                onChange={(e) =>
-                  setFormData({ ...formData, minutes: e.target.value })
-                }
+                value={minutes}
+                onChange={(e) => setMinutes(e.target.value)}
                 required
               />
               <p className="text-xs text-muted-foreground">
-                Los slots se crearán automáticamente dividiendo el período en
-                intervalos de esta duración
+                Los slots se crearán automáticamente cada día del rango
+                seleccionado, dividiendo cada día en intervalos de esta duración
+                entre la hora de inicio y fin
               </p>
             </div>
           </div>
